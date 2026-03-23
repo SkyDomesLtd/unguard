@@ -14,6 +14,11 @@ jobs:
   mirror:
     name: Mirror images from upstream
     runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
+      packages: write
     strategy:
       matrix:
         image:
@@ -56,6 +61,19 @@ jobs:
       - name: Push image to target registry
         run: |
           docker push ${{ env.TARGET_REGISTRY }}/${{ matrix.image }}:${{ inputs.version }}
+
+      - name: Get image digest
+        id: digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.TARGET_REGISTRY }}/${{ matrix.image }}:${{ inputs.version }} | cut -d'@' -f2)
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Generate artifact attestation
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ env.TARGET_REGISTRY }}/${{ matrix.image }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          push-to-registry: true
 
       - name: Verify digest
         run: |
