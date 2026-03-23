@@ -19,6 +19,7 @@ jobs:
       contents: read
       attestations: write
       packages: write
+      artifact-metadata: write
     strategy:
       matrix:
         image:
